@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:c="http://www.springframework.org/schema/c"
+       xsi:schemaLocation="
+        http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+
+    <bean id="studentDao" class="com.tjx.dao.StudentDaoImpl"/>
+    <!--配置切面-->
+    <bean id="aspectJ" class="com.tjx.util.AspectJ"/>
+
+    <aop:aspectj-autoproxy/>
+
+    <bean id="studentDao1" class="com.tjx.dao.StudentDaoImpl"/>
+    <!--前置增强-->
+    <bean id="beforeAdvice" class="com.tjx.util.BeforeAdvice"/>
+    <!--后置增强-->
+    <bean id="afterAdvice" class="com.tjx.util.AfterAdvice"/>
+    <!--环绕增强-->
+    <bean id="aroundAdvice" class="com.tjx.util.AroundAdvice"/>
+    <!--异常增强-->
+    <bean id="exceptionAdvice" class="com.tjx.util.ExceptionAdvice"/>
+
+<!--①：配置工厂 前置、后置、环绕-->
+    <bean id="proxy1" class="org.springframework.aop.framework.ProxyFactoryBean">
+        <property name="targetName" value="studentDao"/>
+        <property name="interceptorNames">
+            <array>
+                <value>beforeAdvice</value>
+                <value>afterAdvice</value>
+                <value>aroundAdvice</value>
+            </array>
+        </property>
+    </bean>
+
+<!--②：配置工厂-->
+    <bean id="proxy2" class="org.springframework.aop.framework.ProxyFactoryBean">
+        <property name="targetName" value="studentDao"/>
+        <property name="interceptorNames" value="advisor"/>
+    </bean>
+<!--②：配置顾问-->
+    <bean id="advisor" class="org.springframework.aop.support.NameMatchMethodPointcutAdvisor">
+        <!--配置通知 通知是顾问的一个属性-->
+        <property name="advice" ref="aroundAdvice"/>
+        <!--切入点  指定主业务方法进行增强-->
+        <property name="mappedNames">
+            <value>sleep</value>
+        </property>
+    </bean>
+
+<!--③配置工厂-->
+    <bean id="proxy" class="org.springframework.aop.framework.ProxyFactoryBean">
+        <property name="targetName" value="studentDao"/>
+        <property name="interceptorNames" value="myAdvisor"/>
+    </bean>
+<!--③配置顾问-->
+    <bean id="myAdvisor" class="org.springframework.aop.support.RegexpMethodPointcutAdvisor">
+        <property name="advice" ref="aroundAdvice"/>
+        <!--切入点-->
+        <!--配置切入点  使用正则表达式 使用类名+方法名
+          . 代表任意单个字符         * 代表.字符出现的次数是0-N
+         ？:0 -1                    +: 1-N
+     -->
+        <property name="patterns">
+            <array>
+                <!--<value>.*s.*</value>--><!--匹配sleep-->
+                <!--<value>com.tjx.dao.StudentDaoImpl.ea.?</value>--><!--匹配 eat ea-->
+                <!--<value>com.tjx.dao.StudentDaoImpl.*s.*</value>--><!--匹配 sleep s sxxxxx-->
+                <value>com.tjx.dao.StudentDaoImpl.*.*</value><!--匹配所有-->
+            </array>
+        </property>
+    </bean>
+
+<!--异常-->
+    <bean id="proxy3" class="org.springframework.aop.framework.ProxyFactoryBean">
+        <property name="targetName" value="studentDao"/>
+        <property name="interceptorNames">
+            <array>
+                <value>exceptionAdvice</value>
+            </array>
+        </property>
+    </bean>
+
+<!--代理生成器  会给容器中所有的Bean都注入增强，不能取消-->
+    <!--<bean class="org.springframework.aop.framework.autoproxy.BeanNameAutoProxyCreator">
+        <property name="beanNames" value="studentDao,studentDao1"/>
+        <property name="interceptorNames" value="myAdvisor"/>
+    </bean>-->
+</beans>

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:c="http://www.springframework.org/schema/c"
+       xsi:schemaLocation="
+        http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <!--引入JDBC文件-->
+    <context:property-placeholder location="classpath:jdbc.properties"/>
+    <!--Spring自带数据源-->
+    <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <property name="driverClassName" value="${jdbc.driver}"/>
+        <property name="url" value="${jdbc.url}"/>
+        <property name="username" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+    </bean>
+
+    <!--配置dao层-->
+    <bean id="accountDao" class="com.tjx.dao.AccountDaoImpl">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+    <bean id="stockDao" class="com.tjx.dao.StockDaoImpl">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+    <!--配置service层-->
+    <bean id="buyStockService" class="com.tjx.service.BuyStockServiceImpl">
+        <property name="accountDao" ref="accountDao"/>
+        <property name="stockDao" ref="stockDao"/>
+    </bean>
+    <!--创建事务管理器-->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <!--使用AspectJ实现Spring对事务管理-->
+    <tx:advice id="advice" transaction-manager="transactionManager">
+        <tx:attributes>
+            <tx:method name="buyStock" isolation="DEFAULT" propagation="REQUIRED" rollback-for="com.tjx.util.BuyStockException"/>
+        </tx:attributes>
+    </tx:advice>
+    <!--配置切入点-->
+    <aop:config>
+        <aop:pointcut id="point1" expression="execution(* *..service.*.buyStock(..))"/>
+        <aop:advisor advice-ref="advice" pointcut-ref="point1"/>
+    </aop:config>
+
+    <!--<tx:advice id="advice1" transaction-manager="transactionManager">
+        <tx:attributes>
+            <tx:method name="updateAccount" isolation="DEFAULT" propagation="REQUIRED" rollback-for="com.tjx.util.BuyStockException"/>
+        </tx:attributes>
+    </tx:advice>4
+    <aop:config>
+        <aop:pointcut id="point" expression="execution(* *..dao.*.updateAccount(..))"/>
+        <aop:advisor advice-ref="advice1" pointcut-ref="point"/>
+    </aop:config>-->
+
+    <!--使用事务工厂-->
+    <!--<bean id="proxyFactoryBean" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        &lt;!&ndash;配置事务管理器&ndash;&gt;
+        <property name="transactionManager" ref="transactionManager"/>
+        &lt;!&ndash;配置目标对象&ndash;&gt;
+        <property name="target" ref="buyStockService"/>
+        &lt;!&ndash;配置切点&ndash;&gt;
+        <property name="transactionAttributes">
+            <props>
+                &lt;!&ndash;指定切入点
+                 01.事务隔离级别
+                 02.事务传播行为
+                 03.发生什么异常时？是回滚还是提交    - 回滚    +提交
+                 &ndash;&gt;
+                <prop key="buyStock">ISOLATION_DEFAULT,PROPAGATION_REQUIRED,-BuyStockException</prop>
+            </props>
+        </property>
+    </bean>-->
+    <!--使用注解实现事务管理-->
+    <!--<tx:annotation-driven transaction-manager="transactionManager"/>-->
+</beans>
